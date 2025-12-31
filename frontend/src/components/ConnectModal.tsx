@@ -1,12 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+
+const DEFAULT_URL = 'http://raspberrypi:4040';
+const DEFAULT_PASSCODE = 'PIMONITOR';
 
 export function ConnectModal() {
   const { setCredentials } = useAuth();
-  const [url, setUrl] = useState('http://localhost:4040');
-  const [passcode, setPasscode] = useState('');
+  const [url, setUrl] = useState(DEFAULT_URL);
+  const [passcode, setPasscode] = useState(DEFAULT_PASSCODE);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [autoConnecting, setAutoConnecting] = useState(true);
+
+  // Auto-connect on load
+  useEffect(() => {
+    const autoConnect = async () => {
+      try {
+        const testUrl = new URL('/deadsync', DEFAULT_URL);
+        testUrl.searchParams.set('passcode', DEFAULT_PASSCODE);
+        const response = await fetch(testUrl.toString());
+        const data = await response.json();
+        if (data.retnmesg !== 'deny') {
+          setCredentials(DEFAULT_URL, DEFAULT_PASSCODE);
+          return;
+        }
+      } catch {
+        // Auto-connect failed, show form
+      }
+      setAutoConnecting(false);
+    };
+    autoConnect();
+  }, [setCredentials]);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +56,17 @@ export function ConnectModal() {
       setLoading(false);
     }
   };
+
+  if (autoConnecting) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-emerald-400 mb-4">PiMonitor</h1>
+          <p className="text-gray-400">Connecting to Pi...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">

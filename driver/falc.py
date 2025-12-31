@@ -20,6 +20,8 @@
 """
 
 import json
+import os
+import mimetypes
 
 import click
 import falcon
@@ -144,6 +146,35 @@ class ProcessResumingEndpoint(object):
         resp.status = falcon.HTTP_200
 
 
+class StaticFileHandler:
+    def __init__(self, static_dir):
+        self.static_dir = static_dir
+
+    def on_get(self, req, resp, filepath='index.html'):
+        if not filepath:
+            filepath = 'index.html'
+
+        full_path = os.path.join(self.static_dir, filepath)
+
+        # Security: prevent path traversal
+        if not os.path.abspath(full_path).startswith(os.path.abspath(self.static_dir)):
+            resp.status = falcon.HTTP_403
+            return
+
+        if not os.path.exists(full_path):
+            # Serve index.html for SPA routing
+            full_path = os.path.join(self.static_dir, 'index.html')
+
+        if os.path.exists(full_path) and os.path.isfile(full_path):
+            content_type, _ = mimetypes.guess_type(full_path)
+            resp.content_type = content_type or 'application/octet-stream'
+            with open(full_path, 'rb') as f:
+                resp.data = f.read()
+            resp.status = falcon.HTTP_200
+        else:
+            resp.status = falcon.HTTP_404
+
+
 main = falcon.API()
 
 
@@ -151,11 +182,12 @@ main = falcon.API()
 @click.option("-p", "--portdata", "portdata", help="Set the port value [0-65536].", default="4040")
 @click.option("-6", "--ipprotv6", "netprotc", flag_value="ipprotv6", help="Start the server on an IPv6 address.")
 @click.option("-4", "--ipprotv4", "netprotc", flag_value="ipprotv4", help="Start the server on an IPv4 address.")
+@click.option("-c", "--passcode", "fixedpass", help="Use a fixed passcode instead of random.", default=None)
 @click.version_option(version="1.0.1", prog_name=click.style("SuperVisor Driver Service", fg="magenta"))
-def mainfunc(portdata, netprotc):
+def mainfunc(portdata, netprotc, fixedpass):
     click.echo(" * " + click.style("SuperVisor Driver Service v1.0.1", fg="green"))
     netpdata = ""
-    passcode = ConnectionManager().passphrase_generator()
+    passcode = fixedpass if fixedpass else ConnectionManager().passphrase_generator()
     if netprotc == "ipprotv6":
         click.echo(" * " + click.style("IP version       ", fg="magenta") + ": " + "6")
         netpdata = "::"
@@ -182,6 +214,17 @@ def mainfunc(portdata, netprotc):
     main.add_route("/termproc", termproc)
     main.add_route("/suspproc", suspproc)
     main.add_route("/resmproc", resmproc)
+
+    # Serve static frontend files
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(script_dir, '..', 'frontend', 'dist')
+    if os.path.exists(static_dir):
+        static = StaticFileHandler(static_dir)
+        main.add_route("/", static)
+        main.add_route("/assets/{filepath}", static)
+        main.add_route("/{filepath}", static)
+        click.echo(" * " + click.style("Frontend         ", fg="magenta") + ": " + "Enabled")
+
     serving.run_simple(netpdata, int(portdata), main)
 
 
