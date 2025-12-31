@@ -144,7 +144,7 @@ main = falcon.API()
 
 
 @click.command()
-@click.option("-p", "--portdata", "portdata", help="Set the port value [0-65536].", default="6969")
+@click.option("-p", "--portdata", "portdata", help="Set the port value [0-65536].", default="4040")
 @click.option("-6", "--ipprotv6", "netprotc", flag_value="ipprotv6", help="Start the server on an IPv6 address.")
 @click.option("-4", "--ipprotv4", "netprotc", flag_value="ipprotv4", help="Start the server on an IPv4 address.")
 @click.version_option(version="1.0.1", prog_name=click.style("SuperVisor Driver Service", fg="magenta"))
