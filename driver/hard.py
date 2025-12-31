@@ -121,12 +121,12 @@ class LiveUpdatingElements:
             "available": bruhdata.available,
             "percent": bruhdata.percent,
             "used": bruhdata.used,
-            "active": bruhdata.active,
-            "inactive": bruhdata.inactive,
-            "buffers": bruhdata.buffers,
-            "cached": bruhdata.cached,
-            "shared": bruhdata.shared,
-            "slab": bruhdata.slab,
+            "active": getattr(bruhdata, 'active', 0),
+            "inactive": getattr(bruhdata, 'inactive', 0),
+            "buffers": getattr(bruhdata, 'buffers', 0),
+            "cached": getattr(bruhdata, 'cached', 0),
+            "shared": getattr(bruhdata, 'shared', 0),
+            "slab": getattr(bruhdata, 'slab', 0),
         }
         return retndata
 
@@ -146,17 +146,18 @@ class LiveUpdatingElements:
         timedata = psutil.cpu_times(percpu=True)
         retndata = {}
         for indx in range(len(timedata)):
+            t = timedata[indx]
             elemobjc = {
-                "user": timedata[indx].user,
-                "nice": timedata[indx].nice,
-                "system": timedata[indx].system,
-                "idle": timedata[indx].idle,
-                "iowait": timedata[indx].iowait,
-                "irq": timedata[indx].irq,
-                "softirq": timedata[indx].softirq,
-                "steal": timedata[indx].steal,
-                "guest": timedata[indx].guest,
-                "guest_nice": timedata[indx].guest_nice,
+                "user": t.user,
+                "nice": getattr(t, 'nice', 0),
+                "system": t.system,
+                "idle": t.idle,
+                "iowait": getattr(t, 'iowait', 0),
+                "irq": getattr(t, 'irq', 0),
+                "softirq": getattr(t, 'softirq', 0),
+                "steal": getattr(t, 'steal', 0),
+                "guest": getattr(t, 'guest', 0),
+                "guest_nice": getattr(t, 'guest_nice', 0),
             }
             retndata[indx] = elemobjc
         return retndata
@@ -194,16 +195,17 @@ class LiveUpdatingElements:
         diousage = psutil.disk_io_counters(perdisk=True)
         retndata = {}
         for indx in diousage.keys():
+            disk = diousage[indx]
             singlist = {
-                "read_count": diousage[indx].read_count,
-                "write_count": diousage[indx].write_count,
-                "read_bytes": diousage[indx].read_bytes,
-                "write_bytes": diousage[indx].write_bytes,
-                "read_time": diousage[indx].read_time,
-                "write_time": diousage[indx].write_time,
-                "read_merged_count": diousage[indx].read_merged_count,
-                "write_merged_count": diousage[indx].write_merged_count,
-                "busy_time": diousage[indx].busy_time,
+                "read_count": disk.read_count,
+                "write_count": disk.write_count,
+                "read_bytes": disk.read_bytes,
+                "write_bytes": disk.write_bytes,
+                "read_time": disk.read_time,
+                "write_time": disk.write_time,
+                "read_merged_count": getattr(disk, 'read_merged_count', 0),
+                "write_merged_count": getattr(disk, 'write_merged_count', 0),
+                "busy_time": getattr(disk, 'busy_time', 0),
             }
             retndata[indx] = singlist
         return retndata
@@ -240,31 +242,41 @@ class LiveUpdatingElements:
         return retndata
 
     def get_sensors_temperature(self):
-        senstemp = psutil.sensors_temperatures(fahrenheit=False)
         retndata = {}
-        for indx in senstemp.keys():
-            retndata[indx] = []
-            for jndx in senstemp[indx]:
-                singdict = {
-                    "label": jndx.label,
-                    "current": str(jndx.current),
-                    "high": str(jndx.high),
-                    "critical": str(jndx.critical),
-                }
-                retndata[indx].append(singdict)
+        if not hasattr(psutil, 'sensors_temperatures'):
+            return retndata
+        try:
+            senstemp = psutil.sensors_temperatures(fahrenheit=False)
+            for indx in senstemp.keys():
+                retndata[indx] = []
+                for jndx in senstemp[indx]:
+                    singdict = {
+                        "label": jndx.label,
+                        "current": str(jndx.current),
+                        "high": str(jndx.high),
+                        "critical": str(jndx.critical),
+                    }
+                    retndata[indx].append(singdict)
+        except:
+            pass
         return retndata
 
     def get_sensors_fan_speed(self):
-        senstemp = psutil.sensors_fans()
         retndata = {}
-        for indx in senstemp.keys():
-            retndata[indx] = []
-            for jndx in senstemp[indx]:
-                singdict = {
-                    "label": jndx.label,
-                    "current": jndx.current
-                }
-                retndata[indx].append(singdict)
+        if not hasattr(psutil, 'sensors_fans'):
+            return retndata
+        try:
+            senstemp = psutil.sensors_fans()
+            for indx in senstemp.keys():
+                retndata[indx] = []
+                for jndx in senstemp[indx]:
+                    singdict = {
+                        "label": jndx.label,
+                        "current": jndx.current
+                    }
+                    retndata[indx].append(singdict)
+        except:
+            pass
         return retndata
 
     def get_sensors_battery_status(self):

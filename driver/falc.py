@@ -31,8 +31,12 @@ from hard import (
     ProcessHandler,
 )
 from psutil import __version__ as psutvers
-from werkzeug import __version__ as wkzgvers
 from werkzeug import serving
+try:
+    from werkzeug import __version__ as wkzgvers
+except ImportError:
+    import importlib.metadata
+    wkzgvers = importlib.metadata.version('werkzeug')
 
 
 class LiveUpdatingEndpoint(object):
